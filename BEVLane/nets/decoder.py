@@ -55,7 +55,8 @@ class MMASegmentDecoder(BaseModule):
                 return_intermediate is `False`, otherwise it has shape
                 [num_layers, num_query, bs, embed_dims].
         """
+        print('decoder value shape:', value.shape)
         output = value.permute(1, 0, 2) # b , hw, c
-        x = cls_branches(output)
+        x = cls_branches[0](output)
 
         return x, None

@@ -395,12 +395,10 @@ class PerceptionTransformer(BaseModule):
         feat_flatten = []
         spatial_shapes = []
         for lvl, feat in enumerate(mlvl_feats):
-            bs, c, h, w = feat.shape
-            feat = feat[:,None,... ]
+            bs,num_cam,  c, h, w = feat.shape
+            # feat = feat[:,None,... ]
             spatial_shape = (h, w)
             feat = feat.flatten(3).permute(1, 0, 3, 2)  # 1, B, (HW), C
-            # if self.use_cams_embeds:  # 这里不需要了
-            #     feat = feat + self.cams_embeds[:, None, None, :].to(feat.dtype)
             feat = feat + self.level_embeds[None,
                           None, lvl:lvl + 1, :].to(feat.dtype)  # [levels, embed_dims]
             spatial_shapes.append(spatial_shape)
@@ -415,11 +413,12 @@ class PerceptionTransformer(BaseModule):
 
         feat_flatten = feat_flatten.permute(
             0, 2, 1, 3)  # (1, level*H*W, bs, embed_dims)
-
+        cam, c, bs2, dimss = feat_flatten.shape
+        feat_flatten = feat_flatten.reshape(c, bs2, dimss)
         bev_embed = self.encoder(
             bev_queries,    # [bev_h * bev_w, BS, embed_dims]
-            feat_flatten,   # ( 1(num_cams), level*H*W, bs, embed_dims)
-            feat_flatten,   # ( 1(num_cams), level*H*W, bs, embed_dims)
+            feat_flatten,   # ( level*H*W, bs, embed_dims)
+            feat_flatten,   # ( level*H*W, bs, embed_dims)
             bev_h=bev_h,
             bev_w=bev_w,
             bev_pos=bev_pos,    #(bev_w, bs, bev_h)
@@ -889,21 +888,21 @@ class BEVFormerLayer(MyCustomBaseTransformerLayer):
 
             # spaital cross attention
             elif layer == 'cross_attn':
-                query = self.attentions[attn_index](
-                    query,
-                    key,
-                    value,
-                    identity if self.pre_norm else None,
-                    query_pos=query_pos,
-                    key_pos=key_pos,
-                    reference_points=ref_2d,
-                    # reference_points_cam=reference_points_cam,
-                    mask=mask,
-                    attn_mask=attn_masks[attn_index],
-                    key_padding_mask=key_padding_mask,
-                    spatial_shapes=spatial_shapes,
-                    level_start_index=level_start_index,
-                    **kwargs)
+                # query = self.attentions[attn_index](
+                #     query,
+                #     key,
+                #     value,
+                #     identity if self.pre_norm else None,
+                #     query_pos=query_pos,
+                #     key_pos=key_pos,
+                #     reference_points=ref_2d,
+                #     # reference_points_cam=reference_points_cam,
+                #     mask=mask,
+                #     attn_mask=attn_masks[attn_index],
+                #     key_padding_mask=key_padding_mask,
+                #     spatial_shapes=spatial_shapes,
+                #     level_start_index=level_start_index,
+                #     **kwargs)
                 attn_index += 1
                 identity = query
 

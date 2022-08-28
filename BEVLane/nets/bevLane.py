@@ -1,4 +1,5 @@
 import copy
+import warnings
 from collections import OrderedDict
 
 import torch
@@ -113,7 +114,8 @@ class PersFormerOneStage(BaseModule):
 
     def extract_img_feat(self, img, img_metas = None, len_queue=None):
         """Extract features of images."""
-        # return list(BNCHW), note: len(list(...)) features,
+        # img.shape = [BCHW]
+        # return list(BNCHW or B len N CHW), note: len(list(...)) features,
         B = img.size(0) # BCHW or B1CHW
         if img is not None:
             if img.dim() == 5 and img.size(0) == 1:
@@ -135,7 +137,10 @@ class PersFormerOneStage(BaseModule):
         img_feats_reshaped = []
         for img_feat in img_feats:
             BN, C, H, W = img_feat.size()
-            img_feats_reshaped.append(img_feat.view(B, int(BN / B), C, H, W))
+            if len_queue is not None:
+                img_feats_reshaped.append(img_feat.view(int(B/len_queue), len_queue, int(BN / B), C, H, W))
+            else:
+                img_feats_reshaped.append(img_feat.view(B, int(BN / B), C, H, W))
         return img_feats_reshaped
 
     def obtain_history_bev(self, imgs_queue, img_metas_list):
@@ -147,13 +152,13 @@ class PersFormerOneStage(BaseModule):
             bs, len_queue, C, H, W = imgs_queue.shape
             imgs_queue = imgs_queue.reshape(bs*len_queue, C, H, W)  # BS和len本质上是一回事
             img_feats_list = self.extract_img_feat(img=imgs_queue, len_queue=len_queue)
-            # img_feats_list = list(BNCHW)
+            # img_feats_list = list( B lenQ 1CHW) len(list) = 4, original is list(B len numC C H W)
             # print(img_metas_list)
             for i in range(len_queue):
                 #img_metas = [each[i] for each in img_metas_list]
                 # img_feats = self.extract_feat(img=img, img_metas=img_metas)
                 img_feats = [each_scale[:, i] for each_scale in img_feats_list]
-                # [B,1,CHW]
+                # [B,1,CHW] ([B,numC,CHW])
                 prev_bev = self.pts_bbox_head(
                     img_feats, None, prev_bev, only_bev=True)
             self.train()
@@ -174,11 +179,11 @@ class PersFormerOneStage(BaseModule):
                 ):
         len_queue = img.size(1)
         prev_img = img[:, :-1, ...] # [B,N,C,H,W] note: no num_camera
-        img = img[:, -1, ...]
+        img = img[:, -1, ...]   # [B,CHW]
         prev_img_metas = copy.deepcopy(img_metas)
         prev_bev = self.obtain_history_bev(prev_img, prev_img_metas)
-
-        img_metas = [each[len_queue - 1] for each in img_metas]
+        print('prebev_shape:', prev_bev.shape)
+        img_metas = None#[each[len_queue - 1] for each in img_metas]
         img_feats = self.extract_img_feat(img=img, img_metas=img_metas)
         # list(B1CHW)
         outs = self.pts_bbox_head(img_feats, img_metas, prev_bev)

@@ -39,7 +39,7 @@ model = dict(
         num_classes=10,
         in_channels=256,
         num_seg = 4,
-        seg_out_channels = 8,
+        seg_out_channels = 9,
         sync_cls_avg_factor=True,
         with_box_refine=True,
         as_two_stage=False,
@@ -62,9 +62,10 @@ model = dict(
                             embed_dims=256,
                             num_levels=1),
                             dict(
-                            type='TemporalSelfAttention',
+                            type='MultiheadAttention',
                             embed_dims=256,
-                            num_levels=1)
+                            num_heads = 8,
+                            dropout=0.1)
                     ],
                     feedforward_channels=512,
                     ffn_dropout=0.1,

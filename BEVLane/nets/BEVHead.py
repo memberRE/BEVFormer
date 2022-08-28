@@ -222,7 +222,8 @@ class BEVFormerHead(BaseDenseHead, BBoxTestMixin):
         # torch.Size([8, 256, 15, 27])
         # torch.Size([8, 256, 8, 14])
         # torch.Size([8, 256, 4, 7])
-        bs, _, _, _ = mlvl_feats[0].shape  # B1CHW
+        pass
+        bs, numC, _, _, _ = mlvl_feats[0].shape  # B1CHW
         dtype = mlvl_feats[0].dtype
         object_query_embeds = self.query_embedding.weight.to(dtype)
         bev_queries = self.bev_embedding.weight.to(dtype)
@@ -254,7 +255,7 @@ class BEVFormerHead(BaseDenseHead, BBoxTestMixin):
                              self.real_w / self.bev_w),
                 bev_pos=bev_pos,
                 # reg_branches=self.reg_branches if self.with_box_refine else None,  # noqa:E501
-                cls_branches=self.seg_branches if self.as_two_stage else None,
+                cls_branches=self.seg_branches, # if self.as_two_stage else None,
                 img_metas=None,
                 prev_bev=prev_bev
         )
@@ -592,8 +593,9 @@ class BEVFormerHead(BaseDenseHead, BBoxTestMixin):
             dict[str, Tensor]: A dictionary of loss components.
         """
 
-        all_cls_scores = preds_dicts['all_cls_scores'][-1, ...]
+        all_cls_scores = preds_dicts['all_cls_scores']
         gt = gt_labels_list[0] if isinstance(gt_labels_list, list) else gt_labels_list
+        gt = gt[:,-1,...]
         ps = F.softmax(all_cls_scores, dim=-1)  # B,HW,C
         B,_,C = ps.shape
         ps = ps.permute(0,2,1).reshape(B, C, self.bev_h, self.bev_w)
@@ -602,8 +604,8 @@ class BEVFormerHead(BaseDenseHead, BBoxTestMixin):
         loss_dict = dict()
 
         # loss from the last decoder layer
-        loss_dict['loss_cls'] = cross_entropy_loss(ps, gt, ps.shape[-1])
-        loss_dict['loss_bbox'] = mask_iou_loss(ps, gt, ps.shape[-1])
+        loss_dict['loss_cls'] = cross_entropy_loss(ps, gt, ps.shape[1])
+        loss_dict['loss_bbox'] = mask_iou_loss(ps, gt, ps.shape[1])
         return loss_dict
 
     @force_fp32(apply_to=('preds_dicts'))
