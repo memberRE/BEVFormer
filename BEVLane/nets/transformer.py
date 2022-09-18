@@ -208,6 +208,7 @@ class BEVFormerEncoder(TransformerLayerSequence):
         #     bs=bev_query.size(1), device=bev_query.device, dtype=bev_query.dtype)
 
         # (bs, num_keys, num_levels, 2) but it actually is (bs, bevH*bevW, 1, 2) TODO: need to check
+        # 生成均匀的采样点：(bs, bevH*bevW, 1, 2)  or  (bs, z, bevH*bevW, 3) 3d
         ref_2d = self.get_reference_points(
             bev_h, bev_w, dim='2d', bs=bev_query.size(1), device=bev_query.device, dtype=bev_query.dtype)
 
@@ -888,21 +889,21 @@ class BEVFormerLayer(MyCustomBaseTransformerLayer):
 
             # spaital cross attention
             elif layer == 'cross_attn':
-                # query = self.attentions[attn_index](
-                #     query,
-                #     key,
-                #     value,
-                #     identity if self.pre_norm else None,
-                #     query_pos=query_pos,
-                #     key_pos=key_pos,
-                #     reference_points=ref_2d,
-                #     # reference_points_cam=reference_points_cam,
-                #     mask=mask,
-                #     attn_mask=attn_masks[attn_index],
-                #     key_padding_mask=key_padding_mask,
-                #     spatial_shapes=spatial_shapes,
-                #     level_start_index=level_start_index,
-                #     **kwargs)
+                query = self.attentions[attn_index](
+                    query,
+                    key,
+                    value,
+                    identity if self.pre_norm else None,
+                    query_pos=query_pos,
+                    key_pos=key_pos,
+                    reference_points=ref_2d,
+                    # reference_points_cam=reference_points_cam,
+                    mask=mask,
+                    attn_mask=attn_masks[attn_index],
+                    key_padding_mask=key_padding_mask,
+                    spatial_shapes=spatial_shapes,
+                    level_start_index=level_start_index,
+                    **kwargs)
                 attn_index += 1
                 identity = query
 

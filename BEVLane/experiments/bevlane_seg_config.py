@@ -66,6 +66,10 @@ model = dict(
                             embed_dims=256,
                             num_heads = 8,
                             dropout=0.1)
+                        # dict(
+                        #     type='TemporalSelfAttention',
+                        #     embed_dims=256,
+                        #     num_levels=1),
                     ],
                     feedforward_channels=512,
                     ffn_dropout=0.1,
